@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infomedics — Billing</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary:   #0060B0;
+  --green:     #1A7A3C;
+  --green-bg:  #E8F5ED;
+  --amber:     #B45309;
+  --amber-bg:  #FEF3C7;
+  --red:       #B91C1C;
+  --red-bg:    #FEE2E2;
+  --bg:        #F4F7FB;
+  --surface:   #FFFFFF;
+  --border:    rgba(0,96,176,0.14);
+  --border-md: rgba(0,96,176,0.25);
+  --text:      #0F1B2D;
+  --sub:       #3D5166;
+  --muted:     #7A90A8;
+  --font:      'Segoe UI', system-ui, sans-serif;
+  --r:         6px;
+}
+
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 13px; }
+
+.hdr { background: #0F4A2E; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.hdr-icon { width: 30px; height: 30px; background: rgba(255,255,255,0.15); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.hdr-title { font-size: 13px; font-weight: 700; color: #fff; }
+.hdr-sub { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+.hdr-badge { margin-left: auto; background: rgba(255,255,255,0.18); border-radius: 20px;
+  padding: 3px 10px; font-size: 10px; font-weight: 600; color: #fff; }
+
+.patient-strip { background: #E8F5ED; border-bottom: 1px solid rgba(26,122,60,0.2);
+  padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
+.patient-avatar { width: 32px; height: 32px; border-radius: 50%; background: #0F4A2E;
+  color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; }
+.patient-name { font-weight: 600; font-size: 13px; }
+.patient-meta { font-size: 11px; color: var(--sub); }
+.acct-id { margin-left: auto; font-size: 11px; font-family: monospace;
+  background: var(--surface); border: 1px solid rgba(26,122,60,0.25); border-radius: 4px;
+  padding: 3px 8px; color: var(--sub); }
+
+.body { padding: 10px 12px; }
+
+.sec { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 8px; }
+.sec-hdr { padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--bg);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.sec-hdr .dot { width: 6px; height: 6px; border-radius: 50%; background: #0F4A2E; }
+.sec-body { padding: 10px 12px; }
+
+/* CONTRIBUTION SPLIT */
+.split-bar { height: 10px; border-radius: 5px; overflow: hidden; display: flex; margin: 6px 0 4px; }
+.split-ins  { background: var(--primary); transition: width 0.4s; }
+.split-pat  { background: #F59E0B; flex: 1; }
+.split-legend { display: flex; gap: 16px; font-size: 10px; color: var(--sub); }
+.split-legend span::before { content: '●'; margin-right: 4px; }
+.split-legend .ins::before { color: var(--primary); }
+.split-legend .pat::before { color: #F59E0B; }
+
+/* INVOICE TABLE */
+.inv-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.inv-table th { text-align: left; padding: 4px 6px; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--border); }
+.inv-table td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.inv-table tr:last-child td { border-bottom: none; }
+.inv-ref { font-family: monospace; color: var(--sub); font-size: 10px; }
+
+/* BADGES */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px;
+  font-size: 10px; font-weight: 600; }
+.badge.green  { background: var(--green-bg);  color: var(--green); }
+.badge.amber  { background: var(--amber-bg);  color: var(--amber); }
+.badge.red    { background: var(--red-bg);    color: var(--red);   }
+.badge.blue   { background: #EBF2FA;          color: var(--primary); }
+
+/* STAT TILES */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 8px 10px; }
+.tile-val { font-size: 18px; font-weight: 700; color: var(--text); }
+.tile-val.red   { color: var(--red); }
+.tile-val.amber { color: var(--amber); }
+.tile-val.green { color: var(--green); }
+.tile-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); margin-top: 2px; font-weight: 600; }
+
+/* GRID / FIELD */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.full { grid-column: span 2; }
+.field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.field select, .field input {
+  width: 100%; font-family: var(--font); font-size: 12px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border-md); border-radius: var(--r);
+  padding: 6px 9px; outline: none; transition: border-color 0.15s; }
+.field select:focus, .field input:focus {
+  border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,96,176,0.12); }
+
+/* TOGGLE */
+.toggle-row { display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0; border-bottom: 1px solid var(--border); }
+.toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.toggle-label { font-size: 12px; font-weight: 600; color: var(--sub); }
+.toggle-label small { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.slider { position: absolute; inset: 0; background: #CBD5E1; border-radius: 20px;
+  cursor: pointer; transition: 0.2s; }
+.slider::before { content:''; position: absolute; width: 14px; height: 14px;
+  left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+input:checked + .slider { background: var(--primary); }
+input:checked + .slider::before { transform: translateX(16px); }
+.toggle.danger input:checked + .slider { background: var(--red); }
+.toggle.success input:checked + .slider { background: var(--green); }
+.toggle.warn input:checked + .slider { background: #D97706; }
+
+/* CONTRIBUTION INPUTS */
+.contrib-row { display: flex; gap: 8px; align-items: flex-end; }
+.contrib-row .field { flex: 1; }
+
+.last-updated { font-size: 10px; color: var(--muted); text-align: right; padding-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-icon">💶</div>
+  <div>
+    <div class="hdr-title">Billing &amp; Debiteurenbeheer</div>
+    <div class="hdr-sub">Infomedics billing platform</div>
+  </div>
+  <div class="hdr-badge">LIVE</div>
+</div>
+
+<div class="patient-strip">
+  <div class="patient-avatar">JV</div>
+  <div>
+    <div class="patient-name">J. van der Meer</div>
+    <div class="patient-meta">Zilveren Kruis  ·  Polisnr. 1234567-00</div>
+  </div>
+  <div class="acct-id">ACCT-00442819</div>
+</div>
+
+<div class="body">
+
+  <!-- STAT TILES -->
+  <div class="tiles">
+    <div class="tile">
+      <div class="tile-val amber">€ 330</div>
+      <div class="tile-label">Total outstanding</div>
+    </div>
+    <div class="tile">
+      <div class="tile-val red">2</div>
+      <div class="tile-label">Open invoices</div>
+    </div>
+    <div class="tile">
+      <div class="tile-val amber">1</div>
+      <div class="tile-label">Reminders sent</div>
+    </div>
+    <div class="tile">
+      <div class="tile-val green">€ 45</div>
+      <div class="tile-label">Last payment</div>
+    </div>
+  </div>
+
+  <!-- OPEN INVOICES -->
+  <div class="sec">
+    <div class="sec-hdr"><span class="dot"></span>Open Invoices</div>
+    <div class="sec-body">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Date</th>
+            <th>Due</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="inv-ref">INV-2026-0081</span></td>
+            <td>01-04-2026</td>
+            <td>01-06-2026</td>
+            <td><strong>€ 285.00</strong></td>
+            <td><span class="badge amber">Outstanding</span></td>
+          </tr>
+          <tr>
+            <td><span class="inv-ref">INV-2026-0094</span></td>
+            <td>15-04-2026</td>
+            <td>15-06-2026</td>
+            <td><strong>€ 45.00</strong></td>
+            <td><span class="badge blue">Reminder sent</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INSURANCE VS PATIENT CONTRIBUTION -->
+  <div class="sec">
+    <div class="sec-hdr"><span class="dot"></span>Contribution Split</div>
+    <div class="sec-body">
+      <div class="split-bar">
+        <div class="split-ins" id="splitIns" style="width: 86%;"></div>
+        <div class="split-pat"></div>
+      </div>
+      <div class="split-legend">
+        <span class="ins">Insurance (Zilveren Kruis): <strong>€ 285.00</strong></span>
+        <span class="pat">Patient contribution: <strong>€ 45.00</strong></span>
+      </div>
+      <div class="contrib-row" style="margin-top:10px;">
+        <div class="field">
+          <label>Insurance contribution (€)</label>
+          <input type="number" id="fInsContr" value="285" oninput="updateSplit()">
+        </div>
+        <div class="field">
+          <label>Patient contribution (€)</label>
+          <input type="number" id="fPatContr" value="45" oninput="updateSplit()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT STATUS -->
+  <div class="sec">
+    <div class="sec-hdr"><span class="dot"></span>Payment &amp; Collection</div>
+    <div class="sec-body">
+      <div class="grid">
+        <div class="field">
+          <label>Payment status</label>
+          <select id="fPayStatus">
+            <option>Partially paid</option>
+            <option>Paid in full</option>
+            <option>Outstanding</option>
+            <option>Overdue</option>
+            <option>In collection</option>
+            <option>Written off</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Collection status</label>
+          <select id="fCollection">
+            <option>Not in collection</option>
+            <option>Soft reminder phase</option>
+            <option>Formal demand sent</option>
+            <option>Debt collection agency</option>
+            <option>Legal proceedings</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Last payment received</label>
+          <input type="date" id="fLastPay" value="2026-04-10">
+        </div>
+        <div class="field">
+          <label>Last payment amount (€)</label>
+          <input type="number" id="fLastAmt" value="45">
+        </div>
+        <div class="field">
+          <label>Payment reminders sent</label>
+          <input type="number" id="fReminders" value="1" min="0">
+        </div>
+        <div class="field">
+          <label>Next action date</label>
+          <input type="date" id="fNextAction" value="2026-06-01">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT ARRANGEMENT -->
+  <div class="sec">
+    <div class="sec-hdr"><span class="dot"></span>Payment Arrangement &amp; Flags</div>
+    <div class="sec-body">
+
+      <div class="toggle-row">
+        <div class="toggle-label">Active payment arrangement
+          <small>Betalingsregeling actief</small>
+        </div>
+        <label class="toggle success">
+          <input type="checkbox" id="fArrangement">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">iDEAL payment link sent
+          <small>Link verstuurd via email</small>
+        </div>
+        <label class="toggle success">
+          <input type="checkbox" id="fIDeal" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">Payment deferment granted
+          <small>Uitstel van betaling verleend</small>
+        </div>
+        <label class="toggle warn">
+          <input type="checkbox" id="fDefer">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">Hardship / WSNP flag
+          <small>Schuldsanering of betalingsproblemen</small>
+        </div>
+        <label class="toggle danger">
+          <input type="checkbox" id="fHardship">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="last-updated">Last synced with billing platform: today at 08:22</div>
+
+</div>
+
+<script>
+  function updateSplit() {
+    const ins = parseFloat(document.getElementById('fInsContr').value) || 0;
+    const pat = parseFloat(document.getElementById('fPatContr').value) || 0;
+    const total = ins + pat;
+    const pct = total > 0 ? Math.round((ins / total) * 100) : 50;
+    document.getElementById('splitIns').style.width = pct + '%';
+  }
+
+  /* Puzzel Widget API */
+  const ORIGIN = 'https://agent.puzzel.com';
+  let port = null;
+  window.addEventListener('message', (e) => {
+    if (e.origin !== ORIGIN) return;
+    if (!port && e.ports?.[0]) {
+      port = e.ports[0];
+      port.onmessage = () => {};
+      port.postMessage({ subscribe: 'requestAccepted' });
+    }
+  });
+</script>
+</body>
+</html>
